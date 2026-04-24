@@ -20,14 +20,17 @@ create table if not exists public.todos (
   title text not null,
   done boolean not null default false,
   status text not null default 'todo',
+  assignee text,
   completed_at timestamptz,
   created_at timestamptz not null default now(),
-  constraint todos_status_check check (status in ('todo','in_progress','questions','postpone'))
+  constraint todos_status_check check (status in ('todo','in_progress','questions','postpone')),
+  constraint todos_assignee_check check (assignee is null or assignee in ('dylan','xander','emson','team'))
 );
 
 create index if not exists todos_client_id_idx on public.todos(client_id);
 create index if not exists todos_done_idx on public.todos(done);
 create index if not exists todos_status_idx on public.todos(status);
+create index if not exists todos_assignee_idx on public.todos(assignee);
 
 create table if not exists public.links (
   id uuid primary key default gen_random_uuid(),

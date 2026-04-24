@@ -3,19 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { TodoStatus } from "@/lib/types";
-
-export async function toggleTodo(id: string, done: boolean) {
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from("todos")
-    .update({ done, completed_at: done ? new Date().toISOString() : null })
-    .eq("id", id);
-  if (error) throw error;
-  revalidatePath("/");
-  revalidatePath("/clients");
-  revalidatePath("/clients/[id]", "page");
-}
+import type { Assignee, TodoStatus } from "@/lib/types";
 
 export async function createTodo(input: { title: string; clientId: string }) {
   const title = input.title.trim();
@@ -30,6 +18,18 @@ export async function createTodo(input: { title: string; clientId: string }) {
   revalidatePath(`/clients/${input.clientId}`);
 }
 
+export async function assignTodo(id: string, assignee: Assignee | null) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("todos")
+    .update({ assignee })
+    .eq("id", id);
+  if (error) throw error;
+  revalidatePath("/");
+  revalidatePath("/clients");
+  revalidatePath("/clients/[id]", "page");
+}
+
 export async function updateTodoStatus(id: string, status: TodoStatus) {
   const supabase = await createClient();
   const { error } = await supabase
@@ -42,9 +42,12 @@ export async function updateTodoStatus(id: string, status: TodoStatus) {
   revalidatePath("/clients/[id]", "page");
 }
 
-export async function deleteTodo(id: string) {
+export async function completeTodo(id: string) {
   const supabase = await createClient();
-  const { error } = await supabase.from("todos").delete().eq("id", id);
+  const { error } = await supabase
+    .from("todos")
+    .update({ done: true, completed_at: new Date().toISOString() })
+    .eq("id", id);
   if (error) throw error;
   revalidatePath("/");
   revalidatePath("/clients");
