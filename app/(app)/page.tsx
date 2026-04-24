@@ -5,7 +5,7 @@ import {
 } from "@/lib/queries";
 import { Card, CardBody, CardHeader } from "@/components/Card";
 import { ClientTable } from "@/components/ClientTable";
-import { GroupedTodoList } from "@/components/TodoList";
+import { KanbanBoard } from "@/components/KanbanBoard";
 import { NewTodoModal } from "@/components/NewTodoModal";
 import { Pill } from "@/components/ui/Pill";
 
@@ -26,7 +26,7 @@ export default async function DashboardPage() {
             Dashboard
           </div>
           <div className="flex items-end gap-3">
-            <h1 className="text-display">All To-Dos</h1>
+            <h1 className="text-display">Board</h1>
             <Pill tone="pink" className="mb-2">
               {todos.length} open
             </Pill>
@@ -35,17 +35,10 @@ export default async function DashboardPage() {
         <NewTodoModal clients={clients} />
       </header>
 
-      <Card>
-        <CardBody className="pt-2">
-          <GroupedTodoList todos={todos} />
-        </CardBody>
-      </Card>
+      <KanbanBoard todos={todos} />
 
       <Card>
-        <CardHeader
-          title="Clients"
-          subtitle={`${summaries.length} total`}
-        />
+        <CardHeader title="Clients" subtitle={`${summaries.length} total`} />
         <CardBody className="pt-0">
           <ClientTable clients={summaries} columns={["openTodos", "progress"]} />
         </CardBody>

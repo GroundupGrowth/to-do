@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import type { TodoStatus } from "@/lib/types";
 
 export async function toggleTodo(id: string, done: boolean) {
   const supabase = await createClient();
@@ -22,11 +23,32 @@ export async function createTodo(input: { title: string; clientId: string }) {
   const supabase = await createClient();
   const { error } = await supabase
     .from("todos")
-    .insert({ title, client_id: input.clientId });
+    .insert({ title, client_id: input.clientId, status: "todo" });
   if (error) throw error;
   revalidatePath("/");
   revalidatePath("/clients");
   revalidatePath(`/clients/${input.clientId}`);
+}
+
+export async function updateTodoStatus(id: string, status: TodoStatus) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("todos")
+    .update({ status })
+    .eq("id", id);
+  if (error) throw error;
+  revalidatePath("/");
+  revalidatePath("/clients");
+  revalidatePath("/clients/[id]", "page");
+}
+
+export async function deleteTodo(id: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("todos").delete().eq("id", id);
+  if (error) throw error;
+  revalidatePath("/");
+  revalidatePath("/clients");
+  revalidatePath("/clients/[id]", "page");
 }
 
 export async function createClientRecord(input: {

@@ -19,12 +19,15 @@ create table if not exists public.todos (
   client_id uuid not null references public.clients(id) on delete cascade,
   title text not null,
   done boolean not null default false,
+  status text not null default 'todo',
   completed_at timestamptz,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  constraint todos_status_check check (status in ('todo','in_progress','questions','postpone'))
 );
 
 create index if not exists todos_client_id_idx on public.todos(client_id);
 create index if not exists todos_done_idx on public.todos(done);
+create index if not exists todos_status_idx on public.todos(status);
 
 create table if not exists public.links (
   id uuid primary key default gen_random_uuid(),
