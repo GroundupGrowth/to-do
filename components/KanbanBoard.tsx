@@ -1,13 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, useTransition } from "react";
-import { Trash2, Check } from "lucide-react";
+import { useEffect, useState, useTransition } from "react";
+import { MessageSquareText, Trash2 } from "lucide-react";
 import { cn, tintFor } from "@/lib/utils";
-import { assignTodo, completeTodo, updateTodoStatus } from "@/lib/mutations";
+import { completeTodo, updateTodoStatus } from "@/lib/mutations";
 import {
-  ASSIGNEES,
-  ASSIGNEE_META,
   TODO_STAGES,
   type Assignee,
   type Todo,
@@ -15,6 +13,7 @@ import {
   type TodoWithClient,
 } from "@/lib/types";
 import { AssigneeChip } from "@/components/AssigneeChip";
+import { TodoCardModal } from "@/components/TodoCardModal";
 
 const STAGE_META: Record<TodoStatus, { label: string; tone: string }> = {
   todo:        { label: "To Do",       tone: "#141413" },
@@ -24,7 +23,10 @@ const STAGE_META: Record<TodoStatus, { label: string; tone: string }> = {
 };
 
 type DropTarget = TodoStatus | "done";
-type BoardTodo = (Todo | TodoWithClient) & { client?: { id: string; name: string } };
+type BoardTodo = (Todo | TodoWithClient) & {
+  notes_count?: number;
+  client?: { id: string; name: string };
+};
 
 export function KanbanBoard<T extends BoardTodo>({
   todos,
@@ -36,6 +38,7 @@ export function KanbanBoard<T extends BoardTodo>({
   const [items, setItems] = useState<T[]>(todos);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [overTarget, setOverTarget] = useState<DropTarget | null>(null);
+  const [openTodoId, setOpenTodoId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
   useEffect(() => {
@@ -72,15 +75,14 @@ export function KanbanBoard<T extends BoardTodo>({
     });
   }
 
-  function handleAssign(id: string, assignee: Assignee | null) {
+  function patchItem(id: string, patch: Partial<BoardTodo>) {
     setItems((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, assignee } : t)),
+      prev.map((t) => (t.id === id ? ({ ...t, ...patch } as T) : t)),
     );
-    startTransition(async () => {
-      try {
-        await assignTodo(id, assignee);
-      } catch {}
-    });
+  }
+
+  function removeItem(id: string) {
+    setItems((prev) => prev.filter((t) => t.id !== id));
   }
 
   const grouped: Record<TodoStatus, T[]> = {
@@ -94,57 +96,80 @@ export function KanbanBoard<T extends BoardTodo>({
     else grouped.todo.push(t);
   }
 
+  const openTodo = openTodoId ? items.find((t) => t.id === openTodoId) ?? null : null;
+
   return (
-    <div className="flex gap-3 overflow-x-auto pb-1">
-      {TODO_STAGES.map((stage) => (
-        <Column
-          key={stage}
-          label={STAGE_META[stage].label}
-          tone={STAGE_META[stage].tone}
-          count={grouped[stage].length}
-          isOver={overTarget === stage}
+    <>
+      <div className="flex gap-3 overflow-x-auto pb-1">
+        {TODO_STAGES.map((stage) => (
+          <Column
+            key={stage}
+            label={STAGE_META[stage].label}
+            tone={STAGE_META[stage].tone}
+            count={grouped[stage].length}
+            isOver={overTarget === stage}
+            onDragOver={(e) => {
+              e.preventDefault();
+              if (overTarget !== stage) setOverTarget(stage);
+            }}
+            onDragLeave={() =>
+              setOverTarget((cur) => (cur === stage ? null : cur))
+            }
+            onDrop={() => handleDrop(stage)}
+          >
+            {grouped[stage].length === 0 ? (
+              <EmptyColumn />
+            ) : (
+              grouped[stage].map((t) => (
+                <KanbanCard
+                  key={t.id}
+                  todo={t}
+                  showClientTag={showClientTag}
+                  dragging={draggingId === t.id}
+                  onDragStart={() => setDraggingId(t.id)}
+                  onDragEnd={() => {
+                    setDraggingId(null);
+                    setOverTarget(null);
+                  }}
+                  onOpen={() => setOpenTodoId(t.id)}
+                />
+              ))
+            )}
+          </Column>
+        ))}
+
+        <DoneZone
+          isOver={overTarget === "done"}
           onDragOver={(e) => {
             e.preventDefault();
-            if (overTarget !== stage) setOverTarget(stage);
+            if (overTarget !== "done") setOverTarget("done");
           }}
           onDragLeave={() =>
-            setOverTarget((cur) => (cur === stage ? null : cur))
+            setOverTarget((cur) => (cur === "done" ? null : cur))
           }
-          onDrop={() => handleDrop(stage)}
-        >
-          {grouped[stage].length === 0 ? (
-            <EmptyColumn />
-          ) : (
-            grouped[stage].map((t) => (
-              <KanbanCard
-                key={t.id}
-                todo={t}
-                showClientTag={showClientTag}
-                dragging={draggingId === t.id}
-                onDragStart={() => setDraggingId(t.id)}
-                onDragEnd={() => {
-                  setDraggingId(null);
-                  setOverTarget(null);
-                }}
-                onAssign={(a) => handleAssign(t.id, a)}
-              />
-            ))
-          )}
-        </Column>
-      ))}
+          onDrop={() => handleDrop("done")}
+        />
+      </div>
 
-      <DoneZone
-        isOver={overTarget === "done"}
-        onDragOver={(e) => {
-          e.preventDefault();
-          if (overTarget !== "done") setOverTarget("done");
+      <TodoCardModal
+        todo={openTodo as BoardTodo | null}
+        open={openTodoId !== null}
+        onOpenChange={(v) => !v && setOpenTodoId(null)}
+        onLocalUpdate={(patch) => {
+          if (openTodoId) patchItem(openTodoId, patch);
         }}
-        onDragLeave={() =>
-          setOverTarget((cur) => (cur === "done" ? null : cur))
-        }
-        onDrop={() => handleDrop("done")}
+        onLocalNotesDelta={(delta) => {
+          if (openTodoId) {
+            const current = items.find((t) => t.id === openTodoId);
+            const next = Math.max(0, (current?.notes_count ?? 0) + delta);
+            patchItem(openTodoId, { notes_count: next });
+          }
+        }}
+        onLocalComplete={() => {
+          if (openTodoId) removeItem(openTodoId);
+        }}
       />
-    </div>
+    </>
   );
 }
 
@@ -204,36 +229,15 @@ function KanbanCard({
   dragging,
   onDragStart,
   onDragEnd,
-  onAssign,
+  onOpen,
 }: {
   todo: BoardTodo;
   showClientTag: boolean;
   dragging: boolean;
   onDragStart: () => void;
   onDragEnd: () => void;
-  onAssign: (a: Assignee | null) => void;
+  onOpen: () => void;
 }) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const cardRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!menuOpen) return;
-    function onClick(e: MouseEvent) {
-      if (!cardRef.current?.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setMenuOpen(false);
-    }
-    document.addEventListener("mousedown", onClick);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onClick);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [menuOpen]);
-
   const clientTag =
     showClientTag && todo.client ? (
       <Link
@@ -253,21 +257,18 @@ function KanbanCard({
 
   return (
     <div
-      ref={cardRef}
       draggable
       onDragStart={(e) => {
         e.dataTransfer.effectAllowed = "move";
         e.dataTransfer.setData("text/plain", todo.id);
-        setMenuOpen(false);
         onDragStart();
       }}
       onDragEnd={onDragEnd}
-      onClick={() => setMenuOpen((v) => !v)}
+      onClick={onOpen}
       className={cn(
-        "relative bg-white rounded-xl border border-hairline p-3 cursor-grab active:cursor-grabbing transition-all",
+        "bg-white rounded-xl border border-hairline p-3 cursor-grab active:cursor-grabbing transition-all",
         "hover:border-[#D4D3CF] hover:shadow-[0_1px_0_0_rgba(0,0,0,0.02),0_4px_12px_-6px_rgba(0,0,0,0.08)]",
         dragging && "opacity-40",
-        menuOpen && "ring-2 ring-accent/30 border-accent/40",
       )}
     >
       <div className="flex items-start justify-between gap-2">
@@ -277,76 +278,16 @@ function KanbanCard({
         <AssigneeChip assignee={todo.assignee ?? null} />
       </div>
 
-      {clientTag && <div className="mt-2">{clientTag}</div>}
-
-      {menuOpen && (
-        <AssigneeMenu
-          current={todo.assignee ?? null}
-          onPick={(a) => {
-            onAssign(a);
-            setMenuOpen(false);
-          }}
-        />
-      )}
-    </div>
-  );
-}
-
-function AssigneeMenu({
-  current,
-  onPick,
-}: {
-  current: Assignee | null;
-  onPick: (a: Assignee | null) => void;
-}) {
-  return (
-    <div
-      role="menu"
-      onClick={(e) => e.stopPropagation()}
-      onMouseDown={(e) => e.stopPropagation()}
-      className="absolute z-20 top-full left-0 right-0 mt-1 bg-white rounded-xl border border-hairline shadow-[0_8px_24px_-8px_rgba(0,0,0,0.15)] p-1"
-    >
-      <div className="px-2 pt-1.5 pb-1 text-[10px] uppercase tracking-wider text-ink-subtle">
-        Assign to
-      </div>
-      {ASSIGNEES.map((a) => {
-        const meta = ASSIGNEE_META[a];
-        const active = current === a;
-        return (
-          <button
-            key={a}
-            type="button"
-            onClick={() => onPick(a)}
-            className={cn(
-              "w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[13px] text-left transition-colors",
-              "hover:bg-[#F7F7F5]",
-              active && "bg-[#F7F7F5]",
-            )}
-          >
-            <span
-              className="h-5 w-5 rounded-full grid place-items-center text-[10px] font-semibold"
-              style={{ background: meta.bg, color: meta.fg }}
-            >
-              {meta.label[0]}
+      {(clientTag || (todo.notes_count ?? 0) > 0) && (
+        <div className="mt-2 flex items-center gap-2 flex-wrap">
+          {clientTag}
+          {(todo.notes_count ?? 0) > 0 && (
+            <span className="inline-flex items-center gap-1 text-[11px] text-ink-muted">
+              <MessageSquareText className="h-3 w-3" strokeWidth={1.75} />
+              {todo.notes_count}
             </span>
-            <span className="flex-1">{meta.label}</span>
-            {active && (
-              <Check className="h-3.5 w-3.5 text-ink-muted" strokeWidth={2} />
-            )}
-          </button>
-        );
-      })}
-      {current !== null && (
-        <button
-          type="button"
-          onClick={() => onPick(null)}
-          className="w-full flex items-center gap-2 px-2 py-1.5 mt-0.5 rounded-lg text-[13px] text-left text-ink-muted hover:bg-[#F7F7F5] transition-colors border-t border-hairline"
-        >
-          <span className="h-5 w-5 rounded-full border border-dashed border-[#D4D3CF] grid place-items-center text-[10px] text-ink-subtle">
-            ?
-          </span>
-          <span>Unassign</span>
-        </button>
+          )}
+        </div>
       )}
     </div>
   );
@@ -381,3 +322,6 @@ function DoneZone({
     </div>
   );
 }
+
+// Re-export the Assignee type for parent imports — no-op but satisfies readers.
+export type { Assignee };

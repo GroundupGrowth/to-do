@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { Assignee, TodoStatus } from "@/lib/types";
+import type { Assignee, TodoNote, TodoStatus } from "@/lib/types";
 
 export async function createTodo(input: { title: string; clientId: string }) {
   const title = input.title.trim();
@@ -16,6 +16,60 @@ export async function createTodo(input: { title: string; clientId: string }) {
   revalidatePath("/");
   revalidatePath("/clients");
   revalidatePath(`/clients/${input.clientId}`);
+}
+
+export async function fetchTodoNotes(todoId: string): Promise<TodoNote[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("todo_notes")
+    .select("*")
+    .eq("todo_id", todoId)
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as TodoNote[];
+}
+
+export async function updateTodoTitle(id: string, title: string) {
+  const trimmed = title.trim();
+  if (!trimmed) throw new Error("Title is required");
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("todos")
+    .update({ title: trimmed })
+    .eq("id", id);
+  if (error) throw error;
+  revalidatePath("/");
+  revalidatePath("/clients");
+  revalidatePath("/clients/[id]", "page");
+}
+
+export async function addTodoNote(input: {
+  todoId: string;
+  author: Assignee | null;
+  body: string;
+}) {
+  const body = input.body.trim();
+  if (!body) throw new Error("Note body is required");
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("todo_notes")
+    .insert({ todo_id: input.todoId, author: input.author, body })
+    .select("*")
+    .single();
+  if (error) throw error;
+  revalidatePath("/");
+  revalidatePath("/clients");
+  revalidatePath("/clients/[id]", "page");
+  return data;
+}
+
+export async function deleteTodoNote(id: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("todo_notes").delete().eq("id", id);
+  if (error) throw error;
+  revalidatePath("/");
+  revalidatePath("/clients");
+  revalidatePath("/clients/[id]", "page");
 }
 
 export async function assignTodo(id: string, assignee: Assignee | null) {

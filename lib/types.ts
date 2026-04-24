@@ -50,6 +50,18 @@ export type ClientSummary = Client & {
   progress: number;
 };
 
-export type TodoWithClient = Todo & {
+export type TodoNote = {
+  id: string;
+  todo_id: string;
+  author: Assignee | null;
+  body: string;
+  created_at: string;
+};
+
+export type TodoWithNotes = Todo & {
+  notes_count: number;
+};
+
+export type TodoWithClient = TodoWithNotes & {
   client: Pick<Client, "id" | "name">;
 };

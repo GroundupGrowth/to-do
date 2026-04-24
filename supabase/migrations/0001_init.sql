@@ -42,10 +42,22 @@ create table if not exists public.links (
 
 create index if not exists links_client_id_idx on public.links(client_id);
 
+create table if not exists public.todo_notes (
+  id uuid primary key default gen_random_uuid(),
+  todo_id uuid not null references public.todos(id) on delete cascade,
+  author text,
+  body text not null,
+  created_at timestamptz not null default now(),
+  constraint todo_notes_author_check check (author is null or author in ('dylan','xander','emson','team'))
+);
+
+create index if not exists todo_notes_todo_id_idx on public.todo_notes(todo_id);
+
 -- Row Level Security
 alter table public.clients enable row level security;
 alter table public.todos enable row level security;
 alter table public.links enable row level security;
+alter table public.todo_notes enable row level security;
 
 -- Authenticated users can do anything.
 drop policy if exists "clients_all_authenticated" on public.clients;
@@ -68,6 +80,13 @@ drop policy if exists "links_all_authenticated" on public.links;
 drop policy if exists "links_all_public" on public.links;
 create policy "links_all_public"
   on public.links for all
+  to anon, authenticated
+  using (true)
+  with check (true);
+
+drop policy if exists "todo_notes_all_public" on public.todo_notes;
+create policy "todo_notes_all_public"
+  on public.todo_notes for all
   to anon, authenticated
   using (true)
   with check (true);

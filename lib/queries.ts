@@ -3,8 +3,9 @@ import type {
   Client,
   ClientSummary,
   Link,
-  Todo,
+  TodoNote,
   TodoWithClient,
+  TodoWithNotes,
 } from "@/lib/types";
 
 export async function getClients(): Promise<Client[]> {
@@ -53,6 +54,26 @@ export async function getClientSummaries(): Promise<ClientSummary[]> {
   });
 }
 
+async function attachNoteCounts<T extends { id: string }>(
+  todos: T[],
+): Promise<(T & { notes_count: number })[]> {
+  if (todos.length === 0) return [];
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("todo_notes")
+    .select("todo_id")
+    .in(
+      "todo_id",
+      todos.map((t) => t.id),
+    );
+  if (error) throw error;
+  const counts = new Map<string, number>();
+  for (const row of data ?? []) {
+    counts.set(row.todo_id, (counts.get(row.todo_id) ?? 0) + 1);
+  }
+  return todos.map((t) => ({ ...t, notes_count: counts.get(t.id) ?? 0 }));
+}
+
 export async function getOpenTodosWithClients(): Promise<TodoWithClient[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -61,7 +82,8 @@ export async function getOpenTodosWithClients(): Promise<TodoWithClient[]> {
     .eq("done", false)
     .order("created_at", { ascending: true });
   if (error) throw error;
-  return (data ?? []) as unknown as TodoWithClient[];
+  const rows = (data ?? []) as unknown as TodoWithClient[];
+  return attachNoteCounts(rows);
 }
 
 export async function getClient(id: string): Promise<Client | null> {
@@ -75,7 +97,9 @@ export async function getClient(id: string): Promise<Client | null> {
   return data ?? null;
 }
 
-export async function getTodosForClient(clientId: string): Promise<Todo[]> {
+export async function getTodosForClient(
+  clientId: string,
+): Promise<TodoWithNotes[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("todos")
@@ -83,7 +107,7 @@ export async function getTodosForClient(clientId: string): Promise<Todo[]> {
     .eq("client_id", clientId)
     .order("created_at", { ascending: true });
   if (error) throw error;
-  return data ?? [];
+  return attachNoteCounts(data ?? []);
 }
 
 export async function getLinksForClient(clientId: string): Promise<Link[]> {
@@ -95,4 +119,15 @@ export async function getLinksForClient(clientId: string): Promise<Link[]> {
     .order("created_at", { ascending: true });
   if (error) throw error;
   return data ?? [];
+}
+
+export async function getNotesForTodo(todoId: string): Promise<TodoNote[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("todo_notes")
+    .select("*")
+    .eq("todo_id", todoId)
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as TodoNote[];
 }
