@@ -81,35 +81,24 @@ export async function getOpenTodosWithClients(): Promise<TodoWithClient[]> {
     .from("todos")
     .select("*, client:clients(id,name)")
     .eq("done", false)
+    .not("triaged_at", "is", null)
     .order("created_at", { ascending: true });
   if (error) throw error;
   const rows = (data ?? []) as unknown as TodoWithClient[];
   return attachNoteCounts(rows);
 }
 
-export async function getInboxTodos(): Promise<{
-  clientId: string | null;
-  todos: TodoWithClient[];
-}> {
+export async function getInboxTodos(): Promise<TodoWithClient[]> {
   const supabase = await createClient();
-  const { data: inbox } = await supabase
-    .from("clients")
-    .select("id")
-    .eq("name", "Inbox")
-    .maybeSingle();
-
-  if (!inbox?.id) return { clientId: null, todos: [] };
-
   const { data, error } = await supabase
     .from("todos")
     .select("*, client:clients(id,name)")
     .eq("done", false)
-    .eq("client_id", inbox.id)
+    .is("triaged_at", null)
     .order("created_at", { ascending: false });
   if (error) throw error;
   const rows = (data ?? []) as unknown as TodoWithClient[];
-  const withNotes = await attachNoteCounts(rows);
-  return { clientId: inbox.id, todos: withNotes };
+  return attachNoteCounts(rows);
 }
 
 export async function getClient(id: string): Promise<Client | null> {
@@ -131,6 +120,7 @@ export async function getTodosForClient(
     .from("todos")
     .select("*")
     .eq("client_id", clientId)
+    .not("triaged_at", "is", null)
     .order("created_at", { ascending: true });
   if (error) throw error;
   return attachNoteCounts(data ?? []);

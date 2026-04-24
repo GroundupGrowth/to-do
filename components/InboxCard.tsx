@@ -1,23 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { ArrowRight, Inbox as InboxIcon, MessageSquareText } from "lucide-react";
+import { useState, useTransition } from "react";
+import {
+  ArrowRightFromLine,
+  Inbox as InboxIcon,
+  MessageSquareText,
+  Trash2,
+} from "lucide-react";
 import { Card, CardBody, CardHeader } from "@/components/Card";
-import { AssigneeChip } from "@/components/AssigneeChip";
 import { TodoCardModal } from "@/components/TodoCardModal";
+import { deleteTodo, triageTodo } from "@/lib/mutations";
 import type { TodoWithClient } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { cn, tintFor } from "@/lib/utils";
 
-export function InboxCard({
-  clientId,
-  todos: initial,
-}: {
-  clientId: string | null;
-  todos: TodoWithClient[];
-}) {
+export function InboxCard({ todos: initial }: { todos: TodoWithClient[] }) {
   const [items, setItems] = useState<TodoWithClient[]>(initial);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [leaving, setLeaving] = useState<Record<string, boolean>>({});
+  const [, startTransition] = useTransition();
 
   const openTodo = openId ? items.find((t) => t.id === openId) ?? null : null;
 
@@ -29,6 +30,30 @@ export function InboxCard({
 
   function removeItem(id: string) {
     setItems((prev) => prev.filter((t) => t.id !== id));
+  }
+
+  function handleTriage(id: string) {
+    setLeaving((s) => ({ ...s, [id]: true }));
+    startTransition(async () => {
+      try {
+        await triageTodo(id);
+        removeItem(id);
+      } catch {
+        setLeaving((s) => ({ ...s, [id]: false }));
+      }
+    });
+  }
+
+  function handleDelete(id: string) {
+    setLeaving((s) => ({ ...s, [id]: true }));
+    startTransition(async () => {
+      try {
+        await deleteTodo(id);
+        removeItem(id);
+      } catch {
+        setLeaving((s) => ({ ...s, [id]: false }));
+      }
+    });
   }
 
   return (
@@ -43,19 +68,8 @@ export function InboxCard({
           }
           subtitle={
             items.length === 0
-              ? "Emails sent to your Postmark inbound address land here."
+              ? "Emails land here first. Send them to the board when you're ready."
               : `${items.length} waiting to triage`
-          }
-          right={
-            clientId && (
-              <Link
-                href={`/clients/${clientId}`}
-                className="text-[12px] text-ink-muted hover:text-ink inline-flex items-center gap-1 transition-colors"
-              >
-                Open board
-                <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.75} />
-              </Link>
-            )
           }
         />
         <CardBody className="pt-0">
@@ -66,38 +80,14 @@ export function InboxCard({
           ) : (
             <ul className="divide-y divide-hairline">
               {items.map((t) => (
-                <li key={t.id}>
-                  <button
-                    type="button"
-                    onClick={() => setOpenId(t.id)}
-                    className={cn(
-                      "w-full text-left flex items-start gap-3 py-3 px-2 -mx-2 rounded-lg transition-colors",
-                      "hover:bg-[#F7F7F5]",
-                    )}
-                  >
-                    <AssigneeChip
-                      assignee={t.assignee ?? null}
-                      className="mt-0.5"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[14px] text-ink truncate">
-                        {t.title}
-                      </div>
-                      <div className="mt-0.5 flex items-center gap-3 text-[11px] text-ink-subtle">
-                        <span>{formatRelative(t.created_at)}</span>
-                        {(t.notes_count ?? 0) > 0 && (
-                          <span className="inline-flex items-center gap-1">
-                            <MessageSquareText
-                              className="h-3 w-3"
-                              strokeWidth={1.75}
-                            />
-                            {t.notes_count}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </button>
-                </li>
+                <InboxRow
+                  key={t.id}
+                  todo={t}
+                  leaving={!!leaving[t.id]}
+                  onOpen={() => setOpenId(t.id)}
+                  onTriage={() => handleTriage(t.id)}
+                  onDelete={() => handleDelete(t.id)}
+                />
               ))}
             </ul>
           )}
@@ -123,6 +113,80 @@ export function InboxCard({
         }}
       />
     </>
+  );
+}
+
+function InboxRow({
+  todo,
+  leaving,
+  onOpen,
+  onTriage,
+  onDelete,
+}: {
+  todo: TodoWithClient;
+  leaving: boolean;
+  onOpen: () => void;
+  onTriage: () => void;
+  onDelete: () => void;
+}) {
+  const tint = todo.client ? tintFor(todo.client.id) : null;
+
+  return (
+    <li
+      className={cn(
+        "group flex items-center gap-3 py-3 px-2 -mx-2 rounded-lg transition-all",
+        "hover:bg-[#F7F7F5]",
+        leaving && "row-leaving",
+      )}
+    >
+      <button
+        type="button"
+        onClick={onOpen}
+        className="flex-1 min-w-0 flex items-start gap-3 text-left"
+      >
+        {tint && todo.client && (
+          <Link
+            href={`/clients/${todo.client.id}`}
+            onClick={(e) => e.stopPropagation()}
+            className="shrink-0 h-6 rounded-full px-2 inline-flex items-center text-[11px] font-medium hover:opacity-90 transition-opacity"
+            style={{ background: tint.bg, color: tint.fg }}
+          >
+            {todo.client.name}
+          </Link>
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="text-[14px] text-ink truncate">{todo.title}</div>
+          <div className="mt-0.5 flex items-center gap-3 text-[11px] text-ink-subtle">
+            <span>{formatRelative(todo.created_at)}</span>
+            {(todo.notes_count ?? 0) > 0 && (
+              <span className="inline-flex items-center gap-1">
+                <MessageSquareText className="h-3 w-3" strokeWidth={1.75} />
+                {todo.notes_count}
+              </span>
+            )}
+          </div>
+        </div>
+      </button>
+
+      <div className="shrink-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button
+          type="button"
+          onClick={onDelete}
+          aria-label="Delete"
+          className="h-8 w-8 grid place-items-center rounded-full text-ink-subtle hover:text-accent hover:bg-white transition-colors"
+        >
+          <Trash2 className="h-4 w-4" strokeWidth={1.75} />
+        </button>
+        <button
+          type="button"
+          onClick={onTriage}
+          className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-ink text-white text-[12px] font-medium hover:bg-[#2A2927] transition-colors"
+        >
+          Send to board
+          <ArrowRightFromLine className="h-3.5 w-3.5" strokeWidth={2} />
+        </button>
+      </div>
+    </li>
   );
 }
 

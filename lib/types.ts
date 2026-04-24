@@ -30,6 +30,7 @@ export type Todo = {
   status: TodoStatus;
   assignee: Assignee | null;
   completed_at: string | null;
+  triaged_at: string | null;
   created_at: string;
 };
 

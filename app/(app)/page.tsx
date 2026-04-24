@@ -36,7 +36,7 @@ export default async function DashboardPage() {
 
       <KanbanBoard todos={todos} />
 
-      <InboxCard clientId={inbox.clientId} todos={inbox.todos} />
+      <InboxCard todos={inbox} />
     </div>
   );
 }

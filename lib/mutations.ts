@@ -11,11 +11,37 @@ export async function createTodo(input: { title: string; clientId: string }) {
   const supabase = await createClient();
   const { error } = await supabase
     .from("todos")
-    .insert({ title, client_id: input.clientId, status: "todo" });
+    .insert({
+      title,
+      client_id: input.clientId,
+      status: "todo",
+      triaged_at: new Date().toISOString(),
+    });
   if (error) throw error;
   revalidatePath("/");
   revalidatePath("/clients");
   revalidatePath(`/clients/${input.clientId}`);
+}
+
+export async function triageTodo(id: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("todos")
+    .update({ triaged_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw error;
+  revalidatePath("/");
+  revalidatePath("/clients");
+  revalidatePath("/clients/[id]", "page");
+}
+
+export async function deleteTodo(id: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("todos").delete().eq("id", id);
+  if (error) throw error;
+  revalidatePath("/");
+  revalidatePath("/clients");
+  revalidatePath("/clients/[id]", "page");
 }
 
 export async function fetchTodoNotes(todoId: string): Promise<TodoNote[]> {

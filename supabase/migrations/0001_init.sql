@@ -22,6 +22,10 @@ create table if not exists public.todos (
   status text not null default 'todo',
   assignee text,
   completed_at timestamptz,
+  -- triaged_at is NULL while the todo is in the Inbox (unrouted email).
+  -- Once the user moves it to the board, we set it to now(). Manual creates
+  -- from the UI skip the inbox by setting triaged_at = now() at insert.
+  triaged_at timestamptz default now(),
   created_at timestamptz not null default now(),
   constraint todos_status_check check (status in ('todo','in_progress','questions','postpone')),
   constraint todos_assignee_check check (assignee is null or assignee in ('dylan','xander','emson','team'))
@@ -31,6 +35,7 @@ create index if not exists todos_client_id_idx on public.todos(client_id);
 create index if not exists todos_done_idx on public.todos(done);
 create index if not exists todos_status_idx on public.todos(status);
 create index if not exists todos_assignee_idx on public.todos(assignee);
+create index if not exists todos_triaged_at_idx on public.todos(triaged_at);
 
 create table if not exists public.links (
   id uuid primary key default gen_random_uuid(),
