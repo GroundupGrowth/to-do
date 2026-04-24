@@ -52,15 +52,17 @@ export function ClientTable({
             <div className="flex items-center gap-3 min-w-0">
               <Avatar id={c.id} name={c.name} size={32} />
               <div className="min-w-0">
-                <div className="text-[14px] font-medium truncate flex items-center gap-1.5 flex-wrap">
-                  <span className="truncate">{c.name}</span>
-                  {(c.tags ?? []).map((t) => (
-                    <TagPill key={t} tag={t} size="xs" />
-                  ))}
-                </div>
+                <div className="text-[14px] font-medium truncate">{c.name}</div>
                 {c.description && (
                   <div className="text-[12px] text-ink-muted truncate">
                     {c.description}
+                  </div>
+                )}
+                {(c.tags ?? []).length > 0 && (
+                  <div className="mt-1.5 flex items-center gap-1 flex-wrap">
+                    {(c.tags ?? []).map((t) => (
+                      <TagPill key={t} tag={t} size="xs" />
+                    ))}
                   </div>
                 )}
               </div>

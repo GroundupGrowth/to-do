@@ -141,14 +141,27 @@ export async function completeTodo(id: string) {
 export async function createClientRecord(input: {
   name: string;
   description?: string;
+  tags?: string[];
 }) {
   const name = input.name.trim();
   if (!name) throw new Error("Name is required");
   const description = input.description?.trim() || null;
+  const tags = (input.tags ?? [])
+    .map((t) => t.trim())
+    .filter(Boolean);
+  // Dedupe case-insensitively, keep first casing.
+  const seen = new Set<string>();
+  const cleanTags: string[] = [];
+  for (const t of tags) {
+    const key = t.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    cleanTags.push(t);
+  }
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("clients")
-    .insert({ name, description })
+    .insert({ name, description, tags: cleanTags })
     .select("id")
     .single();
   if (error) throw error;
