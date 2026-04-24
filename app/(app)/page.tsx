@@ -1,10 +1,9 @@
 import {
-  getClientSummaries,
   getClients,
+  getInboxTodos,
   getOpenTodosWithClients,
 } from "@/lib/queries";
-import { Card, CardBody, CardHeader } from "@/components/Card";
-import { ClientTable } from "@/components/ClientTable";
+import { InboxCard } from "@/components/InboxCard";
 import { KanbanBoard } from "@/components/KanbanBoard";
 import { NewTodoModal } from "@/components/NewTodoModal";
 import { Pill } from "@/components/ui/Pill";
@@ -12,10 +11,10 @@ import { Pill } from "@/components/ui/Pill";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const [todos, clients, summaries] = await Promise.all([
+  const [todos, clients, inbox] = await Promise.all([
     getOpenTodosWithClients(),
     getClients(),
-    getClientSummaries(),
+    getInboxTodos(),
   ]);
 
   return (
@@ -37,12 +36,7 @@ export default async function DashboardPage() {
 
       <KanbanBoard todos={todos} />
 
-      <Card>
-        <CardHeader title="Clients" subtitle={`${summaries.length} total`} />
-        <CardBody className="pt-0">
-          <ClientTable clients={summaries} columns={["openTodos", "progress"]} />
-        </CardBody>
-      </Card>
+      <InboxCard clientId={inbox.clientId} todos={inbox.todos} />
     </div>
   );
 }
