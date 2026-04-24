@@ -19,19 +19,26 @@ import { createClient } from "@/lib/supabase/server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+type PostmarkAttachment = {
+  Name?: string;
+  ContentType?: string;
+  ContentLength?: number;
+};
+
 type PostmarkInbound = {
   From?: string;
   FromName?: string;
+  Date?: string;
   Subject?: string;
   TextBody?: string;
   HtmlBody?: string;
-  StrippedTextReply?: string;
   MessageID?: string;
+  Attachments?: PostmarkAttachment[];
 };
 
 const INBOX_NAME = "Inbox";
 const MAX_TITLE_LEN = 140;
-const MAX_BODY_LEN = 20_000;
+const MAX_BODY_LEN = 60_000;
 
 export async function POST(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -57,11 +64,15 @@ export async function POST(request: Request) {
 
   const rawSubject = (payload.Subject ?? "").trim();
   const fromName = (payload.FromName || payload.From || "").trim();
+  const fromEmail = (payload.From ?? "").trim();
+  const dateStr = (payload.Date ?? "").trim();
+  // Prefer TextBody so forwarded / quoted content is preserved. Fall back to
+  // stripped HTML only if there's literally no text version (unusual).
   const bodyText =
-    payload.StrippedTextReply?.trim() ||
     payload.TextBody?.trim() ||
-    stripHtml(payload.HtmlBody ?? "") ||
+    stripHtml(payload.HtmlBody ?? "").trim() ||
     "";
+  const attachments = (payload.Attachments ?? []).filter((a) => a.Name);
 
   if (!rawSubject && !bodyText) {
     return NextResponse.json(
@@ -114,11 +125,14 @@ export async function POST(request: Request) {
     );
   }
 
-  if (bodyText || fromName) {
+  if (bodyText || fromName || attachments.length > 0) {
     const noteBody = composeNoteBody({
       fromName,
+      fromEmail,
+      dateStr,
       subject: rawSubject,
       body: bodyText,
+      attachments,
     });
     await supabase.from("todo_notes").insert({
       todo_id: todo.id,
@@ -156,19 +170,47 @@ async function ensureInboxClient(
 
 function composeNoteBody({
   fromName,
+  fromEmail,
+  dateStr,
   subject,
   body,
+  attachments,
 }: {
   fromName: string;
+  fromEmail: string;
+  dateStr: string;
   subject: string;
   body: string;
+  attachments: PostmarkAttachment[];
 }): string {
   const lines: string[] = [];
-  if (fromName) lines.push(`From: ${fromName}`);
+
+  const fromLine =
+    fromName && fromEmail && fromName !== fromEmail
+      ? `${fromName} <${fromEmail}>`
+      : fromName || fromEmail;
+  if (fromLine) lines.push(`From: ${fromLine}`);
+  if (dateStr) lines.push(`Date: ${dateStr}`);
   if (subject) lines.push(`Subject: ${subject}`);
-  if (lines.length) lines.push("");
-  lines.push(body);
+
+  if (lines.length) lines.push("", "---", "");
+  if (body) lines.push(body);
+
+  if (attachments.length > 0) {
+    lines.push("", "Attachments:");
+    for (const a of attachments) {
+      const size = a.ContentLength ? ` (${formatSize(a.ContentLength)})` : "";
+      lines.push(`  • ${a.Name}${size}`);
+    }
+  }
+
   return lines.join("\n").trim();
+}
+
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function stripHtml(html: string): string {

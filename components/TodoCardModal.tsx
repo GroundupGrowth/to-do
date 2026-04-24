@@ -51,9 +51,9 @@ export function TodoCardModal({
         <Dialog.Content
           className={cn(
             "fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2",
-            "w-[min(560px,calc(100vw-32px))] max-h-[calc(100vh-48px)] overflow-hidden",
+            "w-[min(820px,calc(100vw-32px))] h-[min(760px,calc(100vh-48px))]",
             "bg-white rounded-2xl border border-hairline shadow-[0_20px_50px_-20px_rgba(0,0,0,0.25)]",
-            "flex flex-col",
+            "flex flex-col overflow-hidden",
           )}
           aria-describedby={undefined}
         >
@@ -391,7 +391,7 @@ function NoteItem({
             {formatRelative(note.created_at)}
           </span>
         </div>
-        <p className="text-[13px] leading-5 text-ink whitespace-pre-wrap break-words">
+        <p className="text-[14px] leading-6 text-ink whitespace-pre-wrap break-words">
           {note.body}
         </p>
       </div>
