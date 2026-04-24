@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { Avatar } from "@/components/ui/Avatar";
 import { ProgressDonut } from "@/components/ProgressDonut";
+import { TagPill } from "@/components/TagPill";
 import type { ClientSummary } from "@/lib/types";
 
 type Column = "openTodos" | "progress" | "notes" | "links";
@@ -51,7 +52,12 @@ export function ClientTable({
             <div className="flex items-center gap-3 min-w-0">
               <Avatar id={c.id} name={c.name} size={32} />
               <div className="min-w-0">
-                <div className="text-[14px] font-medium truncate">{c.name}</div>
+                <div className="text-[14px] font-medium truncate flex items-center gap-1.5 flex-wrap">
+                  <span className="truncate">{c.name}</span>
+                  {(c.tags ?? []).map((t) => (
+                    <TagPill key={t} tag={t} size="xs" />
+                  ))}
+                </div>
                 {c.description && (
                   <div className="text-[12px] text-ink-muted truncate">
                     {c.description}

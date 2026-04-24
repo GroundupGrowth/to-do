@@ -157,6 +157,38 @@ export async function createClientRecord(input: {
   redirect(`/clients/${data.id}`);
 }
 
+export async function deleteClient(id: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("clients").delete().eq("id", id);
+  if (error) throw error;
+  revalidatePath("/");
+  revalidatePath("/clients");
+  redirect("/clients");
+}
+
+export async function setClientTags(id: string, tags: string[]) {
+  // Trim, dedupe (case-insensitive), preserve original casing of first occurrence.
+  const seen = new Set<string>();
+  const clean: string[] = [];
+  for (const raw of tags) {
+    const t = raw.trim();
+    if (!t) continue;
+    const key = t.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    clean.push(t);
+  }
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("clients")
+    .update({ tags: clean })
+    .eq("id", id);
+  if (error) throw error;
+  revalidatePath("/");
+  revalidatePath("/clients");
+  revalidatePath(`/clients/${id}`);
+}
+
 export async function updateClientName(id: string, name: string) {
   const trimmed = name.trim();
   if (!trimmed) throw new Error("Name is required");

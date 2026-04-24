@@ -3,6 +3,7 @@ export type Client = {
   name: string;
   description: string | null;
   notes: string | null;
+  tags: string[];
   created_at: string;
 };
 

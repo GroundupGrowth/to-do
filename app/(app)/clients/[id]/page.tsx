@@ -11,6 +11,8 @@ import { ClientTodoSection } from "@/components/ClientTodoSection";
 import { NotesEditor } from "@/components/NotesEditor";
 import { LinksList } from "@/components/LinksList";
 import { EditableClientName } from "@/components/EditableClientName";
+import { ClientTagsEditor } from "@/components/ClientTagsEditor";
+import { DeleteClientButton } from "@/components/DeleteClientButton";
 import { ProgressDonut } from "@/components/ProgressDonut";
 import { Pill } from "@/components/ui/Pill";
 
@@ -44,24 +46,36 @@ export default async function ClientDetailPage({
         Clients
       </Link>
 
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
           <EditableClientName id={client.id} initialName={client.name} />
           {client.description && (
             <p className="mt-2 text-[14px] text-ink-muted max-w-xl">
               {client.description}
             </p>
           )}
-          <div className="mt-3 flex items-center gap-2">
+          <div className="mt-3 flex items-center gap-2 flex-wrap">
             <Pill tone="pink">{open} open</Pill>
             {done > 0 && <Pill tone="green">{done} done</Pill>}
           </div>
+          <div className="mt-3">
+            <ClientTagsEditor
+              clientId={client.id}
+              initial={client.tags ?? []}
+            />
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[12px] text-ink-muted tabular-nums">
-            {progress}% complete
-          </span>
-          <ProgressDonut value={progress} size={36} stroke={4} />
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-[12px] text-ink-muted tabular-nums">
+              {progress}% complete
+            </span>
+            <ProgressDonut value={progress} size={36} stroke={4} />
+          </div>
+          <DeleteClientButton
+            clientId={client.id}
+            clientName={client.name}
+          />
         </div>
       </header>
 

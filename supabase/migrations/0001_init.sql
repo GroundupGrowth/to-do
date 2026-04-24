@@ -11,8 +11,11 @@ create table if not exists public.clients (
   name text not null,
   description text,
   notes text default '',
+  tags text[] not null default '{}',
   created_at timestamptz not null default now()
 );
+
+create index if not exists clients_tags_idx on public.clients using gin(tags);
 
 create table if not exists public.todos (
   id uuid primary key default gen_random_uuid(),
