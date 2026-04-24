@@ -3,6 +3,7 @@ import type {
   Client,
   ClientSummary,
   Link,
+  OnboardingStepWithChildren,
   TodoNote,
   TodoWithClient,
   TodoWithNotes,
@@ -119,6 +120,37 @@ export async function getLinksForClient(clientId: string): Promise<Link[]> {
     .order("created_at", { ascending: true });
   if (error) throw error;
   return data ?? [];
+}
+
+export async function getOnboardingFlow(): Promise<OnboardingStepWithChildren[]> {
+  const supabase = await createClient();
+  const [stepsRes, promptsRes, linksRes] = await Promise.all([
+    supabase
+      .from("onboarding_steps")
+      .select("*")
+      .order("position", { ascending: true })
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("onboarding_prompts")
+      .select("*")
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("onboarding_links")
+      .select("*")
+      .order("created_at", { ascending: true }),
+  ]);
+  if (stepsRes.error) throw stepsRes.error;
+  if (promptsRes.error) throw promptsRes.error;
+  if (linksRes.error) throw linksRes.error;
+
+  const prompts = promptsRes.data ?? [];
+  const links = linksRes.data ?? [];
+
+  return (stepsRes.data ?? []).map((s) => ({
+    ...s,
+    prompts: prompts.filter((p) => p.step_id === s.id),
+    links: links.filter((l) => l.step_id === s.id),
+  }));
 }
 
 export async function getNotesForTodo(todoId: string): Promise<TodoNote[]> {

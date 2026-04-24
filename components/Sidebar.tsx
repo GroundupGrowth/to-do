@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users } from "lucide-react";
+import { LayoutDashboard, Users, Workflow } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, match: (p: string) => p === "/" },
   { href: "/clients", label: "Clients", icon: Users, match: (p: string) => p.startsWith("/clients") },
+  { href: "/onboarding", label: "Onboarding", icon: Workflow, match: (p: string) => p.startsWith("/onboarding") },
 ];
 
 export function Sidebar() {

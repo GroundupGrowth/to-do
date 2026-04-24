@@ -65,3 +65,32 @@ export type TodoWithNotes = Todo & {
 export type TodoWithClient = TodoWithNotes & {
   client: Pick<Client, "id" | "name">;
 };
+
+export type OnboardingStep = {
+  id: string;
+  title: string;
+  description: string | null;
+  position: number;
+  created_at: string;
+};
+
+export type OnboardingPrompt = {
+  id: string;
+  step_id: string;
+  label: string;
+  body: string;
+  created_at: string;
+};
+
+export type OnboardingLink = {
+  id: string;
+  step_id: string;
+  label: string;
+  url: string;
+  created_at: string;
+};
+
+export type OnboardingStepWithChildren = OnboardingStep & {
+  prompts: OnboardingPrompt[];
+  links: OnboardingLink[];
+};

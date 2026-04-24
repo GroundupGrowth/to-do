@@ -176,3 +176,112 @@ export async function deleteLink(id: string, clientId: string) {
   revalidatePath("/clients");
   revalidatePath(`/clients/${clientId}`);
 }
+
+// ---- Onboarding ----
+
+export async function createOnboardingStep(input: {
+  title: string;
+  description?: string;
+}) {
+  const title = input.title.trim();
+  if (!title) throw new Error("Title is required");
+  const description = input.description?.trim() || null;
+  const supabase = await createClient();
+  const { data: maxRow } = await supabase
+    .from("onboarding_steps")
+    .select("position")
+    .order("position", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const position = (maxRow?.position ?? -1) + 1;
+  const { error } = await supabase
+    .from("onboarding_steps")
+    .insert({ title, description, position });
+  if (error) throw error;
+  revalidatePath("/onboarding");
+}
+
+export async function updateOnboardingStep(
+  id: string,
+  patch: { title?: string; description?: string | null },
+) {
+  const update: { title?: string; description?: string | null } = {};
+  if (patch.title !== undefined) {
+    const t = patch.title.trim();
+    if (!t) throw new Error("Title is required");
+    update.title = t;
+  }
+  if (patch.description !== undefined) {
+    update.description = patch.description?.trim() || null;
+  }
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("onboarding_steps")
+    .update(update)
+    .eq("id", id);
+  if (error) throw error;
+  revalidatePath("/onboarding");
+}
+
+export async function deleteOnboardingStep(id: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("onboarding_steps")
+    .delete()
+    .eq("id", id);
+  if (error) throw error;
+  revalidatePath("/onboarding");
+}
+
+export async function addOnboardingPrompt(input: {
+  stepId: string;
+  label: string;
+  body: string;
+}) {
+  const label = input.label.trim();
+  const body = input.body;
+  if (!label || !body.trim()) throw new Error("Label and body are required");
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("onboarding_prompts")
+    .insert({ step_id: input.stepId, label, body });
+  if (error) throw error;
+  revalidatePath("/onboarding");
+}
+
+export async function deleteOnboardingPrompt(id: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("onboarding_prompts")
+    .delete()
+    .eq("id", id);
+  if (error) throw error;
+  revalidatePath("/onboarding");
+}
+
+export async function addOnboardingLink(input: {
+  stepId: string;
+  label: string;
+  url: string;
+}) {
+  const label = input.label.trim();
+  const url = input.url.trim();
+  if (!label || !url) throw new Error("Label and URL are required");
+  const normalized = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("onboarding_links")
+    .insert({ step_id: input.stepId, label, url: normalized });
+  if (error) throw error;
+  revalidatePath("/onboarding");
+}
+
+export async function deleteOnboardingLink(id: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("onboarding_links")
+    .delete()
+    .eq("id", id);
+  if (error) throw error;
+  revalidatePath("/onboarding");
+}
