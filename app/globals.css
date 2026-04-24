@@ -1,0 +1,84 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  background-color: #f4f4f2;
+  color: #141413;
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+*::selection {
+  background-color: #ffe4ec;
+  color: #141413;
+}
+
+/* Subtle fade for items as they leave a list */
+@keyframes rowFadeOut {
+  to {
+    opacity: 0;
+    transform: translateY(-2px);
+    filter: blur(1px);
+  }
+}
+
+.row-leaving {
+  animation: rowFadeOut 150ms ease forwards;
+  pointer-events: none;
+}
+
+/* Checkbox check animation */
+@keyframes checkPop {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.checkbox-check {
+  animation: checkPop 150ms ease;
+}
+
+/* Markdown rendering in notepad */
+.prose-notes h1,
+.prose-notes h2,
+.prose-notes h3 {
+  font-weight: 600;
+  color: #141413;
+  letter-spacing: -0.01em;
+}
+.prose-notes h1 { font-size: 22px; margin: 0.4em 0 0.3em; }
+.prose-notes h2 { font-size: 18px; margin: 0.4em 0 0.3em; }
+.prose-notes h3 { font-size: 16px; margin: 0.4em 0 0.3em; }
+.prose-notes p { margin: 0.4em 0; line-height: 1.6; }
+.prose-notes ul { list-style: disc; padding-left: 1.2em; margin: 0.4em 0; }
+.prose-notes ol { list-style: decimal; padding-left: 1.2em; margin: 0.4em 0; }
+.prose-notes li { margin: 0.15em 0; }
+.prose-notes a { color: #b93963; text-decoration: underline; text-underline-offset: 2px; }
+.prose-notes code {
+  background: #efeeeb;
+  padding: 0 4px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+.prose-notes blockquote {
+  border-left: 2px solid #e8e8e6;
+  padding-left: 0.8em;
+  color: #6b6a66;
+  margin: 0.4em 0;
+}
