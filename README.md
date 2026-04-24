@@ -34,8 +34,9 @@ supabase/migrations/0001_init.sql
 supabase/seed.sql
 ```
 
-Enable **email** as a sign-in provider in Supabase Auth settings. Magic link is
-the default flow — no password needed.
+> **No auth.** The app is open on the link — anyone with the URL can read and
+> write. RLS policies grant full access to the `anon` role on purpose. Don't
+> share the URL anywhere public.
 
 ### 3. Run
 
@@ -58,15 +59,13 @@ RLS is enabled on all tables. Any authenticated user can read/write everything
 
 ```
 app/
-  (app)/                  authenticated app shell
+  (app)/                  app shell (sidebar + main)
     page.tsx              main dashboard
     clients/page.tsx      clients list
     clients/[id]/page.tsx client detail
-  login/                  magic link login
-  auth/callback/          OAuth / magic link exchange
 components/               reusable UI
 lib/
-  supabase/               client + server + middleware helpers
+  supabase/               client + server helpers
   queries.ts              all DB reads
   mutations.ts            all DB writes (server actions)
 supabase/

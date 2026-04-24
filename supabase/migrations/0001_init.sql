@@ -1,6 +1,8 @@
 -- PM — initial schema
--- Single-user internal tool. RLS is enabled so data is gated behind auth,
--- but any authenticated user can read/write all rows.
+-- Single-user internal tool with no auth layer (the app is "open on the link").
+-- RLS stays enabled, and policies grant full access to everyone (anon +
+-- authenticated). This is intentional for this specific use case — do NOT
+-- copy these policies into a multi-user app.
 
 create extension if not exists "pgcrypto";
 
@@ -41,22 +43,25 @@ alter table public.links enable row level security;
 
 -- Authenticated users can do anything.
 drop policy if exists "clients_all_authenticated" on public.clients;
-create policy "clients_all_authenticated"
+drop policy if exists "clients_all_public" on public.clients;
+create policy "clients_all_public"
   on public.clients for all
-  to authenticated
+  to anon, authenticated
   using (true)
   with check (true);
 
 drop policy if exists "todos_all_authenticated" on public.todos;
-create policy "todos_all_authenticated"
+drop policy if exists "todos_all_public" on public.todos;
+create policy "todos_all_public"
   on public.todos for all
-  to authenticated
+  to anon, authenticated
   using (true)
   with check (true);
 
 drop policy if exists "links_all_authenticated" on public.links;
-create policy "links_all_authenticated"
+drop policy if exists "links_all_public" on public.links;
+create policy "links_all_public"
   on public.links for all
-  to authenticated
+  to anon, authenticated
   using (true)
   with check (true);

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Settings } from "lucide-react";
+import { LayoutDashboard, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -46,18 +46,6 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="mt-auto pt-6 border-t border-hairline">
-        <div className="flex items-center gap-3 px-2">
-          <div className="h-9 w-9 rounded-full bg-[#EEE6D9] text-[#6E5A36] grid place-items-center text-[13px] font-semibold">
-            ME
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-[13px] font-medium truncate">You</div>
-            <div className="text-[12px] text-ink-muted truncate">Signed in</div>
-          </div>
-          <Settings className="h-[16px] w-[16px] text-ink-subtle" strokeWidth={1.75} />
-        </div>
-      </div>
     </aside>
   );
 }
