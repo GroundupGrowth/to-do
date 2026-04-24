@@ -71,12 +71,10 @@ export function LinksList({
               href={l.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 min-w-0 text-[14px] hover:text-accent transition-colors"
+              title={l.url}
+              className="flex-1 min-w-0 text-[14px] font-medium hover:text-accent transition-colors truncate"
             >
-              <span className="font-medium">{l.label}</span>
-              <span className="text-ink-subtle ml-2 truncate">
-                {prettyUrl(l.url)}
-              </span>
+              {l.label}
             </a>
             <button
               type="button"
@@ -142,11 +140,3 @@ export function LinksList({
   );
 }
 
-function prettyUrl(url: string) {
-  try {
-    const u = new URL(url);
-    return u.host + (u.pathname === "/" ? "" : u.pathname);
-  } catch {
-    return url;
-  }
-}

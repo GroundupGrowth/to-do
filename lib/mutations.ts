@@ -5,7 +5,11 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Assignee, TodoNote, TodoStatus } from "@/lib/types";
 
-export async function createTodo(input: { title: string; clientId: string }) {
+export async function createTodo(input: {
+  title: string;
+  clientId: string;
+  status?: TodoStatus;
+}) {
   const title = input.title.trim();
   if (!title) throw new Error("Title is required");
   const supabase = await createClient();
@@ -14,7 +18,7 @@ export async function createTodo(input: { title: string; clientId: string }) {
     .insert({
       title,
       client_id: input.clientId,
-      status: "todo",
+      status: input.status ?? "todo",
       triaged_at: new Date().toISOString(),
     });
   if (error) throw error;

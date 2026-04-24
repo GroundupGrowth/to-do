@@ -3,9 +3,9 @@ import {
   getInboxTodos,
   getOpenTodosWithClients,
 } from "@/lib/queries";
+import { DashboardBoard } from "@/components/DashboardBoard";
 import { InboxCard } from "@/components/InboxCard";
-import { KanbanBoard } from "@/components/KanbanBoard";
-import { NewTodoModal } from "@/components/NewTodoModal";
+import { NewTodoButton } from "@/components/NewTodoModal";
 import { Pill } from "@/components/ui/Pill";
 
 export const dynamic = "force-dynamic";
@@ -31,10 +31,10 @@ export default async function DashboardPage() {
             </Pill>
           </div>
         </div>
-        <NewTodoModal clients={clients} />
+        <NewTodoButton clients={clients} />
       </header>
 
-      <KanbanBoard todos={todos} />
+      <DashboardBoard todos={todos} clients={clients} />
 
       <InboxCard todos={inbox} />
     </div>
